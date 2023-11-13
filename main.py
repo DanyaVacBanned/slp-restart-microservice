@@ -5,8 +5,6 @@ import time
 import subprocess
 import requests
 
-import threading
-
 from dotenv import load_dotenv
 
 from tgbot import TgBot
@@ -19,19 +17,52 @@ def get_site_status(
         ):
     response = requests.get(url)
     if response.status_code in [504, 500]:
-        if response.status_code == 500:
-            alert_message = "slp упал со статусом 500, пробую рестарнуть.."
-        else:
-            alert_message = "slp упал со статусом 504, произвожу рестарт..."
-        TgBot.send_message(
-            chat_id=tg_chat_id,
-            bot_token=tg_bot_token,
-            message_text = alert_message
-        )
-        #os.system("/bin/bash -c " + restart_script_path)
-        proc = subprocess.Popen(["bash -c " + restart_script_path], shell=True, stdout=subprocess.PIPE)
-        output = proc.stdout.read()
-        print(output)
+        try:
+            if response.status_code == 500:
+                alert_message = "slp упал со статусом 500, пробую рестарнуть.."
+            else:
+                alert_message = "slp упал со статусом 504, произвожу рестарт..."
+            TgBot.send_message(
+                chat_id=tg_chat_id,
+                bot_token=tg_bot_token,
+                message_text = alert_message
+            )
+            subprocess.Popen(["bash -c " + restart_script_path], shell=True, stdout=subprocess.PIPE)
+            time.sleep(30)
+            second_response = requests.get(url)
+            if second_response.status_code == 200:
+
+                TgBot.send_message(
+                    chat_id=tg_chat_id,
+                    bot_token=tg_bot_token,
+                    message_text=f"Рестарт прошёл успешно"
+                )
+            else:
+                TgBot.send_message(
+                    chat_id=tg_chat_id,
+                    bot_token=tg_bot_token,
+                    message_text=f"Рестарт не помог, собираю логи"
+                )
+                app_output = subprocess.run(['docker', 'logs', 'app'], stdout=subprocess.PIPE)
+                time.sleep(5)
+                nginx_output = subprocess.run(['docker', 'logs', 'nginx'], stdout=subprocess.PIPE)
+                TgBot.send_message(
+                    chat_id=tg_chat_id,
+                    bot_token=tg_bot_token,
+                    message_text=f"Логи приложения:\n{app_output.stdout.decode('utf-8')}"  
+                )
+                TgBot.send_message(
+                    chat_id=tg_chat_id,
+                    bot_token=tg_bot_token,
+                    message_text=f"Логи Nginx:\n{nginx_output.stdout.decode('utf-8')}"  
+                )
+        except Exception as ex:
+            TgBot.send_message(
+                chat_id=tg_chat_id,
+                bot_token=tg_bot_token,
+                message_text=f"Что-то пошло не так:\n{ex}"
+            )
+            
 
 def site_status_monitoring(
         url: str, 
@@ -49,12 +80,6 @@ def main():
     restart_script_path = os.getenv('restart_script_path')
     tg_chat_id = os.getenv("tg_chat_id")
     tg_bot_token = os.getenv("tg_bot_token")
-    #threading.Thread(
-    #    target=site_status_monitoring, 
-    #    args=(
-    #        url, restart_script_path, tg_chat_id, tg_bot_token,
-    #        )
-    #    ).start()
     site_status_monitoring(url, restart_script_path, tg_chat_id, tg_bot_token)
 
 if __name__ == "__main__":
