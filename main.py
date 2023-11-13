@@ -28,8 +28,10 @@ def get_site_status(
             bot_token=tg_bot_token,
             message_text = alert_message
         )
-        subprocess.call([restart_script_path])
-
+        #os.system("/bin/bash -c " + restart_script_path)
+        proc = subprocess.Popen(["bash -c " + restart_script_path], shell=True, stdout=subprocess.PIPE)
+        output = proc.stdout.read()
+        print(output)
 
 def site_status_monitoring(
         url: str, 
@@ -47,12 +49,13 @@ def main():
     restart_script_path = os.getenv('restart_script_path')
     tg_chat_id = os.getenv("tg_chat_id")
     tg_bot_token = os.getenv("tg_bot_token")
-    threading.Thread(
-        target=site_status_monitoring, 
-        args=(
-            url, restart_script_path, tg_chat_id, tg_bot_token,
-            )
-        ).start()
+    #threading.Thread(
+    #    target=site_status_monitoring, 
+    #    args=(
+    #        url, restart_script_path, tg_chat_id, tg_bot_token,
+    #        )
+    #    ).start()
+    site_status_monitoring(url, restart_script_path, tg_chat_id, tg_bot_token)
 
 if __name__ == "__main__":
     main()
