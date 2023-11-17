@@ -1,3 +1,4 @@
+import logging
 import os
 
 import time
@@ -9,6 +10,13 @@ from dotenv import load_dotenv
 
 from tgbot import TgBot
 
+logging.basicConfig(
+    level=logging.ERROR, 
+    filename="latest.log", 
+    filemode="a", 
+    format="%(asctime)s %(levelname)s %(message)s"
+)
+
 def get_site_status(
         url: str, 
         restart_script_path: str,
@@ -19,7 +27,7 @@ def get_site_status(
     if response.status_code in [504, 500]:
         try:
             if response.status_code == 500:
-                alert_message = "slp упал со статусом 500, пробую рестарнуть.."
+                alert_message = "slp упал со статусом 500, пробую рестарnтнуть.."
             else:
                 alert_message = "slp упал со статусом 504, произвожу рестарт..."
             TgBot.send_message(
@@ -28,7 +36,7 @@ def get_site_status(
                 message_text = alert_message
             )
             subprocess.Popen(["bash -c " + restart_script_path], shell=True, stdout=subprocess.PIPE)
-            time.sleep(30)
+            time.sleep(60)
             second_response = requests.get(url)
             if second_response.status_code == 200:
 
