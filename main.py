@@ -79,8 +79,15 @@ def site_status_monitoring(
         tg_bot_token: str
     ):
     while True:
-        get_site_status(url, restart_script_path, tg_chat_id, tg_bot_token)
-        time.sleep(60*15)
+        try:
+            get_site_status(url, restart_script_path, tg_chat_id, tg_bot_token)
+            time.sleep(60*15)
+        except Exception as ex:
+            TgBot.send_message(
+                chat_id=tg_chat_id,
+                bot_token=tg_bot_token,
+                message_text=f"Что-то пошло не так:\n{ex}"
+            )
 
 def main():
     load_dotenv()
